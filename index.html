@@ -18,7 +18,8 @@
     }
 
     section,
-    form {
+    form,
+    svg {
       line-height: 1.5;
       margin-bottom: 3rem;
     }
@@ -34,6 +35,16 @@
 
     form div {
       margin: 0.5rem 0;
+    }
+
+    canvas,
+    svg {
+      border: 1px solid black;
+    }
+
+    blockquote,
+    .guestbook-message p {
+      display: none;
     }
   </style>
 </head>
@@ -55,9 +66,9 @@
       <strong>We build things by hand.</strong>
     </p>
     <p>
-      We write. We paint. We carve wood and polish watches. We solder circuit boards and write
-      codes. We are not good at dealing with people, let alone AI. We prefer creative work more than management. We
-      refuse to be deprived of the joy of crafting — even if it is inefficient or professionally replaceable.
+      We write. We paint. We carve wood and polish watches. We solder circuit boards and write codes.
+      We are not good at dealing with people, let alone AI. We prefer creative work more than management.
+      We refuse to be deprived of the joy of crafting — even if it is inefficient or professionally replaceable.
     </p>
     <p>
       We will finish the unfinished poem in a mountain cabin, <i>with our own hands</i>.
@@ -67,17 +78,15 @@
   <script async src="https://guestbooks.meadow.cafe/resources/js/embed_script/6037/script.js"></script>
   <!-- Guestbook Form -->
   <div id="guestbooks___guestbook-form-container">
-    <form id="guestbooks___guestbook-form" action="https://guestbooks.meadow.cafe/guestbook/6037/submit" method="post">
+    <form id="guestbooks___guestbook-form"
+      action="https://guestbooks.meadow.cafe/resources/js/embed_script/6037/script.js" method="post">
       <div class="guestbooks___input-container">
-        <input type="text" id="name" name="name" placeholder="Your Name" required>
-      </div>
-      <div class="guestbooks___input-container">
-        <input type="url" id="website" name="website" placeholder="Website (optional)">
+        <input type="text" id="name" name="name" value="kusa" required hidden>
       </div>
       <div id="guestbooks___challenge-answer-container"></div>
-      <div class="guestbooks___input-container">
-        <textarea id="text" name="text" placeholder="Leave your message here..." rows="4"
-          style="width: 100%; box-sizing: border-box; resize: vertical;" required></textarea>
+      <textarea id="text" name="text" required hidden></textarea>
+      <div class="canvas">
+        <canvas width="384" height="192"></canvas>
       </div>
       <div id="guestbooks___pow-status"></div>
       <button type="submit">Submit</button>
@@ -86,6 +95,136 @@
   </div>
   <!-- Messages Section -->
   <div id="guestbooks___guestbook-messages-container"></div>
+  <script>
+    (() => {
+      const canvas = document.getElementsByTagName('canvas')[0];
+      const ctx = canvas.getContext('2d');
+      const dpi = window.devicePixelRatio || 1;
+      const strokeWidth = 4;
+      const color = '#000000';
+      const strokes = [];
+      let currentStroke = [];
+      let drawing = false;
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        let clientX, clientY;
+        if (e.touches?.length) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+        else { clientX = e.clientX; clientY = e.clientY; }
+        return { x: clientX - rect.left, y: clientY - rect.top, t: performance.now() };
+      }
+
+      function start(pt) {
+        drawing = true;
+        currentStroke = [pt];
+        draw(pt);
+      }
+
+      function draw(pt) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, strokeWidth / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function addPoint(pt) {
+        if (!drawing) return;
+        currentStroke.push(pt);
+        redraw();
+      }
+
+      function end() {
+        if (!drawing) return;
+        drawing = false;
+        if (currentStroke.length) strokes.push(currentStroke);
+        currentStroke = [];
+        redraw();
+        SVGtoText();
+      }
+
+      function redraw() {
+        ctx.clearRect(0, 0, canvas.width / dpi, canvas.height / dpi);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = strokeWidth;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+
+        const drawStroke = (s) => {
+          if (!s || s.length === 0) return;
+          if (s.length === 1) { draw(s[0]); return; }
+          ctx.beginPath();
+          ctx.moveTo(s[0].x, s[0].y);
+
+          for (let i = 1; i < s.length - 1; i++) {
+            const xc = (s[i].x + s[i + 1].x) / 2;
+            const yc = (s[i].y + s[i + 1].y) / 2;
+            ctx.quadraticCurveTo(s[i].x, s[i].y, xc, yc);
+          }
+          const last = s[s.length - 1];
+          ctx.lineTo(last.x, last.y);
+          ctx.stroke();
+        };
+
+        for (const s of strokes) drawStroke(s);
+        if (currentStroke.length) drawStroke(currentStroke);
+      }
+
+      function strokeToPath(s) {
+        if (!s || s.length === 0) return '';
+        if (s.length === 1) return `M ${s[0].x} ${s[0].y} l 0 0`;
+
+        let d = `M ${s[0].x} ${s[0].y}`;
+        for (let i = 1; i < s.length - 1; i++) {
+          const xc = (s[i].x + s[i + 1].x) / 2;
+          const yc = (s[i].y + s[i + 1].y) / 2;
+          d += ` Q ${s[i].x} ${s[i].y} ${xc} ${yc}`;
+        }
+        const last = s[s.length - 1];
+        d += ` L ${last.x} ${last.y}`;
+        return d;
+      }
+
+      function SVGtoText() {
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        const d = strokes.map(strokeToPath).filter(Boolean).join(' ').trim();
+        if (!d) return;
+        const text = document.getElementById('text');
+        text.value = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${Math.round(w)} ${Math.round(h)}"><path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+      }
+
+      function textToSVG(text) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'image/svg+xml');
+        return doc.querySelector('svg');
+      }
+
+      canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); start(getPos(e)); });
+      canvas.addEventListener('pointermove', (e) => { if (drawing) addPoint(getPos(e)); });
+      canvas.addEventListener('pointerup', (e) => { canvas.releasePointerCapture(e.pointerId); end(); });
+      canvas.addEventListener('pointercancel', end);
+
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(getPos(e)); }, { passive: false });
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); addPoint(getPos(e)); }, { passive: false });
+      canvas.addEventListener('touchend', (e) => { e.preventDefault(); end(); }, { passive: false });
+
+      ctx.scale(1, 1);
+      redraw();
+
+      const comments = document.getElementById('guestbooks___guestbook-messages-container');
+      const observer = new MutationObserver(() => {
+        const blocks = document.getElementsByTagName('blockquote');
+        for (const b of blocks) {
+          const svg = textToSVG(b.innerText);
+          if (svg) {
+            b.insertAdjacentElement('afterend', svg);
+          }
+        }
+      });
+      observer.observe(comments, { childList: true });
+    })();
+  </script>
 </body>
 
 </html>
