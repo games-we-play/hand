@@ -8,7 +8,7 @@
   <style>
     body {
       font: 1rem system-ui, sans-serif;
-      margin: 0 auto;
+      margin: 3rem auto;
       padding: 0;
       width: 24rem;
     }
@@ -40,6 +40,10 @@
     canvas,
     svg {
       border: 1px solid black;
+    }
+
+    .buttons {
+      text-align: right;
     }
 
     blockquote,
@@ -78,10 +82,12 @@
   <script async src="https://guestbooks.meadow.cafe/resources/js/embed_script/6037/script.js"></script>
   <!-- Guestbook Form -->
   <div id="guestbooks___guestbook-form-container">
-    <form id="guestbooks___guestbook-form"
-      action="https://guestbooks.meadow.cafe/resources/js/embed_script/6037/script.js" method="post">
+    <form id="guestbooks___guestbook-form" action="https://guestbooks.meadow.cafe/guestbook/6037/submit" method="post">
       <div class="guestbooks___input-container">
         <input type="text" id="name" name="name" value="kusa" required hidden>
+      </div>
+      <div class="guestbooks___input-container">
+        <input type="url" id="website" name="website" hidden>
       </div>
       <div id="guestbooks___challenge-answer-container"></div>
       <textarea id="text" name="text" required hidden></textarea>
@@ -89,19 +95,27 @@
         <canvas width="384" height="192"></canvas>
       </div>
       <div id="guestbooks___pow-status"></div>
-      <button type="submit">Submit</button>
+      <div class="buttons">
+        <button id="clear" type="reset">Clear</button>
+        <button id="submit" type="submit">Submit</button>
+      </div>
       <div id="guestbooks___error-message"></div>
     </form>
   </div>
   <!-- Messages Section -->
   <div id="guestbooks___guestbook-messages-container"></div>
+  <!-- Attribution (optional but appreciated!) -->
+  <div id="guestbooks___guestbook-made-with">
+    Powered by <a href="https://guestbooks.meadow.cafe" target="_blank">Guestbooks</a>
+  </div>
+  <script src="./pako.min.js"></script>
   <script>
     (() => {
+      const text = document.getElementById('text');
       const canvas = document.getElementsByTagName('canvas')[0];
       const ctx = canvas.getContext('2d');
-      const dpi = window.devicePixelRatio || 1;
       const strokeWidth = 4;
-      const color = '#000000';
+      const color = 'black';
       const strokes = [];
       let currentStroke = [];
       let drawing = false;
@@ -139,11 +153,11 @@
         if (currentStroke.length) strokes.push(currentStroke);
         currentStroke = [];
         redraw();
-        SVGtoText();
+        FillToForm();
       }
 
       function redraw() {
-        ctx.clearRect(0, 0, canvas.width / dpi, canvas.height / dpi);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = strokeWidth;
@@ -170,28 +184,37 @@
         if (currentStroke.length) drawStroke(currentStroke);
       }
 
+      function clear() {
+        strokes.length = 0;
+        currentStroke = [];
+        redraw();
+        text.value = '';
+      }
+
       function strokeToPath(s) {
         if (!s || s.length === 0) return '';
-        if (s.length === 1) return `M ${s[0].x} ${s[0].y} l 0 0`;
+        if (s.length === 1)
+          return `M ${Math.round(s[0].x)} ${Math.round(s[0].y)} l 0 0`;
 
-        let d = `M ${s[0].x} ${s[0].y}`;
+        let d = `M ${Math.round(s[0].x)} ${Math.round(s[0].y)}`;
         for (let i = 1; i < s.length - 1; i++) {
           const xc = (s[i].x + s[i + 1].x) / 2;
           const yc = (s[i].y + s[i + 1].y) / 2;
-          d += ` Q ${s[i].x} ${s[i].y} ${xc} ${yc}`;
+          d += ` Q ${Math.round(s[i].x)} ${Math.round(s[i].y)} ${Math.round(xc)} ${Math.round(yc)}`;
         }
         const last = s[s.length - 1];
-        d += ` L ${last.x} ${last.y}`;
+        d += ` L ${Math.round(last.x)} ${Math.round(last.y)}`;
         return d;
       }
 
-      function SVGtoText() {
+      function FillToForm() {
         const w = canvas.getBoundingClientRect().width;
         const h = canvas.getBoundingClientRect().height;
         const d = strokes.map(strokeToPath).filter(Boolean).join(' ').trim();
         if (!d) return;
-        const text = document.getElementById('text');
-        text.value = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${Math.round(w)} ${Math.round(h)}"><path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${Math.round(w)} ${Math.round(h)}"><path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+        text.value = btoa(String.fromCharCode(...pako.gzip(svg)));
+        console.log(text.value.length);
       }
 
       function textToSVG(text) {
@@ -212,14 +235,22 @@
       ctx.scale(1, 1);
       redraw();
 
+      const clearBtn = document.getElementById('clear');
+      clearBtn.addEventListener('click', clear);
+      const submitBtn = document.getElementById('submit');
+      submitBtn.addEventListener('click', () => setTimeout(() => clear(), 1));
+
       const comments = document.getElementById('guestbooks___guestbook-messages-container');
       const observer = new MutationObserver(() => {
         const blocks = document.getElementsByTagName('blockquote');
         for (const b of blocks) {
-          const svg = textToSVG(b.innerText);
-          if (svg) {
-            b.insertAdjacentElement('afterend', svg);
-          }
+          try {
+            const compressed = Uint8Array.from(atob(b.innerText), c => c.charCodeAt(0));
+            const svg = textToSVG(pako.ungzip(compressed, { to: 'string' }));
+            if (svg) {
+              b.insertAdjacentElement('afterend', svg);
+            }
+          } catch { }
         }
       });
       observer.observe(comments, { childList: true });
