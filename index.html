@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hand</title>
+  <style>
+    body {
+      font: 1rem system-ui, sans-serif;
+      margin: 0 auto;
+      padding: 0;
+      width: 24rem;
+    }
+
+    body * {
+      font-size: 1rem;
+    }
+
+    section,
+    form {
+      line-height: 1.5;
+      margin-bottom: 3rem;
+    }
+
+    section[lang="zh-CN"] {
+      line-height: 1.75;
+    }
+
+    section[lang="zh-CN"] i {
+      font-style: normal;
+      text-emphasis: filled dot;
+    }
+
+    form div {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <section lang="zh-CN">
+    <p>
+      <strong>我们手作。</strong>
+    </p>
+    <p>
+      我们写字，我们绘画，我们切削木材、打磨钟表，我们撰写程式、焊接电路。我们不擅长与人打交道，遑论人工智慧。我们喜欢创造性的工作，而非管理。我们拒绝被他人剥夺造物之乐，纵使效率低下，纵使我们的职业被取代。
+    </p>
+    <p>
+      我们将在山中的小木屋完成那未竟的诗篇，<i>要用亲手</i>。
+    </p>
+  </section>
+  <section lang="en">
+    <p>
+      <strong>We build things by hand.</strong>
+    </p>
+    <p>
+      We write. We paint. We carve wood and polish watches. We solder circuit boards and write
+      codes. We are not good at dealing with people, let alone AI. We prefer creative work more than management. We
+      refuse to be deprived of the joy of crafting — even if it is inefficient or professionally replaceable.
+    </p>
+    <p>
+      We will finish the unfinished poem in a mountain cabin, <i>with our own hands</i>.
+    </p>
+  </section>
+  <!-- Guestbook Script -->
+  <script async src="https://guestbooks.meadow.cafe/resources/js/embed_script/6037/script.js"></script>
+  <!-- Guestbook Form -->
+  <div id="guestbooks___guestbook-form-container">
+    <form id="guestbooks___guestbook-form" action="https://guestbooks.meadow.cafe/guestbook/6037/submit" method="post">
+      <div class="guestbooks___input-container">
+        <input type="text" id="name" name="name" placeholder="Your Name" required>
+      </div>
+      <div class="guestbooks___input-container">
+        <input type="url" id="website" name="website" placeholder="Website (optional)">
+      </div>
+      <div id="guestbooks___challenge-answer-container"></div>
+      <div class="guestbooks___input-container">
+        <textarea id="text" name="text" placeholder="Leave your message here..." rows="4"
+          style="width: 100%; box-sizing: border-box; resize: vertical;" required></textarea>
+      </div>
+      <div id="guestbooks___pow-status"></div>
+      <button type="submit">Submit</button>
+      <div id="guestbooks___error-message"></div>
+    </form>
+  </div>
+  <!-- Messages Section -->
+  <div id="guestbooks___guestbook-messages-container"></div>
+</body>
+
+</html>
