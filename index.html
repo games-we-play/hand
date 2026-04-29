@@ -231,7 +231,7 @@
         const h = Math.round(canvas.getBoundingClientRect().height);
         const d = strokes.map(strokeToPath).filter(Boolean).join(' ').trim();
         if (!d) return;
-        svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${d}" stroke="${color}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg>`;
         text.value = btoa(String.fromCharCode(...pako.gzip(svg)));
         console.log(text.value.length);
       }
@@ -261,16 +261,17 @@
 
       const comments = document.getElementById('guestbooks___guestbook-messages-container');
       const observer = new MutationObserver(() => {
-        const blocks = document.getElementsByTagName('blockquote');
+        const blocks = comments.querySelectorAll('blockquote:not([data-processed])');
         for (const b of blocks) {
           try {
+            b.setAttribute('data-processed', 'true');
             const compressed = Uint8Array.from(atob(b.innerText), c => c.charCodeAt(0));
             const svg = textToSVG(pako.ungzip(compressed, { to: 'string' }));
             if (svg) b.insertAdjacentElement('afterend', svg);
           } catch { }
         }
       });
-      observer.observe(comments, { childList: true });
+      observer.observe(comments, { childList: true, subtree: true });
     })();
   </script>
 </body>
